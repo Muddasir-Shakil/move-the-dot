@@ -1,51 +1,51 @@
-/*
- * Copyright (c) 2016 Intel Corporation
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-#include <zephyr.h>
 #include <device.h>
-#include <devicetree.h>
-#include <drivers/gpio.h>
+#include <drivers/display.h>
+#include <lvgl.h>
+#include <stdio.h>
+#include <string.h>
+#include <zephyr.h>
+#include <dot.h>
 
-/* 1000 msec = 1 sec */
-#define SLEEP_TIME_MS   1000
-
-/* The devicetree node identifier for the "led0" alias. */
-#define LED0_NODE DT_ALIAS(led0)
-
-#if DT_NODE_HAS_STATUS(LED0_NODE, okay)
-#define LED0	DT_GPIO_LABEL(LED0_NODE, gpios)
-#define PIN	DT_GPIO_PIN(LED0_NODE, gpios)
-#define FLAGS	DT_GPIO_FLAGS(LED0_NODE, gpios)
-#else
-/* A build error here means your board isn't set up to blink an LED. */
-#error "Unsupported board: led0 devicetree alias is not defined"
-#define LED0	""
-#define PIN	0
-#define FLAGS	0
-#endif
-
+#define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(app);
 void main(void)
 {
-	const struct device *dev;
-	bool led_is_on = true;
-	int ret;
+	const struct device *display_dev;
+	display_dev = device_get_binding(CONFIG_LVGL_DISPLAY_DEV_NAME);
 
-	dev = device_get_binding(LED0);
-	if (dev == NULL) {
+	if (display_dev == NULL)
+	{
+		LOG_ERR("device not found.  Aborting test.");
 		return;
 	}
-
-	ret = gpio_pin_configure(dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
-	if (ret < 0) {
-		return;
-	}
-
-	while (1) {
-		gpio_pin_set(dev, PIN, (int)led_is_on);
-		led_is_on = !led_is_on;
-		k_msleep(SLEEP_TIME_MS);
+	display_blanking_off(display_dev);
+	
+	lv_obj_t *dot = create_dot();
+	reset_dot(dot);
+	lv_task_handler();
+	
+	lv_coord_t x = 1;
+	lv_coord_t y = 1;
+	while (1)
+	{
+		if (x <= 128)
+		{
+			move_dot_x(dot, x);
+			++x;
+		}
+		else
+		{
+			move_dot_y(dot, y);
+			++y;
+		}
+		lv_task_handler();
+		k_sleep(K_MSEC(10));
+		if (x >= 120 && y >= 60)
+		{
+			reset_dot(dot);
+			x = 0;
+			y = 0;
+		}
 	}
 }
