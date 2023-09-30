@@ -5,8 +5,10 @@
  */
 
 arduino_i2c: &i2c1 {
-	gy521@68 {
-		compatible = "invensense,gy521";
+	mpu6050@68 {
+		compatible = "invensense,mpu6050";
 		reg = <0x68>;
+		status = "okay";
+		label = "MPU6050";
 	};
 };
